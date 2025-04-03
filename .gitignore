@@ -35,7 +35,77 @@ ENV/
 
 # Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Local development
 instance/
-.webassets-cache 
+.webassets-cache
+
+# Node
+node_modules/
+package-lock.json
+
+# Tailwind CSS
+static/dist/
+.cache/
+.parcel-cache/
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+*.temp
+
+# Environment variables
+.env*
+!.env.example
+
+# Flask
+flask_session/
+instance/
+
+# MongoDB
+*.mongodb
+mongod.lock
+mongodb.log
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg 
