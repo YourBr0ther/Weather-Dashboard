@@ -77,8 +77,92 @@ const updateACCard = (data) => {
     document.getElementById('ac-update').textContent = `Last updated: ${formatTimestamp(ac.timestamp)}`;
 };
 
+// Chart Configuration
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+        intersect: false,
+        mode: 'index'
+    },
+    plugins: {
+        legend: {
+            position: 'top',
+            labels: {
+                color: '#B3B3B3',
+                font: {
+                    family: 'Inter'
+                }
+            }
+        },
+        tooltip: {
+            backgroundColor: '#1E1E1E',
+            titleColor: '#FFFFFF',
+            bodyColor: '#B3B3B3',
+            borderColor: '#BB86FC',
+            borderWidth: 1,
+            padding: 12,
+            displayColors: true,
+            callbacks: {
+                label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                        label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                        label += context.dataset.yAxisID === 'temperature' 
+                            ? `${context.parsed.y.toFixed(1)}°F`
+                            : `${context.parsed.y.toFixed(1)}%`;
+                    }
+                    return label;
+                }
+            }
+        }
+    },
+    scales: {
+        x: {
+            type: 'time',
+            time: {
+                unit: 'hour',
+                displayFormats: {
+                    hour: 'ha'
+                }
+            },
+            grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+            },
+            ticks: {
+                color: '#B3B3B3',
+                maxRotation: 0
+            }
+        },
+        temperature: {
+            type: 'linear',
+            position: 'left',
+            grid: {
+                color: 'rgba(255, 75, 75, 0.1)'
+            },
+            ticks: {
+                color: '#FF4B4B',
+                callback: value => `${value}°F`
+            }
+        },
+        humidity: {
+            type: 'linear',
+            position: 'right',
+            grid: {
+                color: 'rgba(75, 158, 255, 0.1)'
+            },
+            ticks: {
+                color: '#4B9EFF',
+                callback: value => `${value}%`
+            }
+        }
+    }
+};
+
 // Room Graph Functions
-const createRoomGraph = (roomName, data) => {
+const createRoomGraph = async (roomName, currentData) => {
     const template = document.getElementById('room-graph-template');
     const clone = template.content.cloneNode(true);
     
@@ -93,14 +177,59 @@ const createRoomGraph = (roomName, data) => {
     const humidityValue = clone.querySelector('.metric-group:last-child .main-value');
     
     // Set current values
-    tempValue.textContent = formatTemperature(data.temperature);
-    humidityValue.textContent = formatHumidity(data.humidity);
+    tempValue.textContent = formatTemperature(currentData.temperature);
+    humidityValue.textContent = formatHumidity(currentData.humidity);
     
     // Set up chart
     const canvas = clone.querySelector('canvas');
-    const ctx = canvas.getContext('2d');
     
-    // Chart configuration will be added in the next step
+    try {
+        // Fetch historical data for the room
+        const response = await fetch(`/api/room-data/${encodeURIComponent(roomName)}`);
+        const historicalData = await response.json();
+        
+        if (historicalData && historicalData.timestamps) {
+            const chart = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: historicalData.timestamps,
+                    datasets: [
+                        {
+                            label: 'Temperature',
+                            yAxisID: 'temperature',
+                            data: historicalData.temperatures,
+                            borderColor: '#FF4B4B',
+                            backgroundColor: 'rgba(255, 75, 75, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Humidity',
+                            yAxisID: 'humidity',
+                            data: historicalData.humidity,
+                            borderColor: '#4B9EFF',
+                            backgroundColor: 'rgba(75, 158, 255, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: chartOptions
+            });
+            
+            // Store chart instance for updates
+            card.dataset.chartInstance = chart;
+        }
+    } catch (error) {
+        console.error(`Error creating graph for ${roomName}:`, error);
+        canvas.parentElement.innerHTML = `
+            <div class="flex items-center justify-center h-full text-error">
+                <span>Failed to load graph data</span>
+            </div>
+        `;
+    }
     
     // Add to container
     document.getElementById('room-graphs').appendChild(clone);
@@ -109,6 +238,16 @@ const createRoomGraph = (roomName, data) => {
 // Main update function
 const updateDashboard = async () => {
     try {
+        // Destroy existing charts before clearing the container
+        const roomGraphs = document.getElementById('room-graphs');
+        roomGraphs.querySelectorAll('.dashboard-card').forEach(card => {
+            const chart = card.dataset.chartInstance;
+            if (chart) {
+                chart.destroy();
+            }
+        });
+        roomGraphs.innerHTML = '';
+        
         const response = await fetch('/api/current-conditions');
         const data = await response.json();
         
@@ -116,14 +255,11 @@ const updateDashboard = async () => {
         updateIndoorCard(data);
         updateACCard(data);
         
-        // Handle room graphs
-        const roomGraphs = document.getElementById('room-graphs');
-        roomGraphs.innerHTML = ''; // Clear existing graphs
-        
+        // Create room graphs
         if (data.rooms) {
-            Object.entries(data.rooms).forEach(([roomName, roomData]) => {
-                createRoomGraph(roomName, roomData);
-            });
+            for (const [roomName, roomData] of Object.entries(data.rooms)) {
+                await createRoomGraph(roomName, roomData);
+            }
         }
     } catch (error) {
         console.error('Error updating dashboard:', error);

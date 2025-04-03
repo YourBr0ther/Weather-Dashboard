@@ -430,5 +430,66 @@ def debug_data_count():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/room-data/<room_name>")
+def room_data(room_name):
+    try:
+        if not client:
+            return jsonify({"error": "Database connection not available"}), 500
+
+        # Get the last 24 hours of data in EST
+        twenty_four_hours_ago = datetime.now(EST) - timedelta(hours=24)
+        
+        # Query MongoDB for room data
+        room_data = list(temp_logs_collection.find({
+            "Room": room_name,
+            "Timestamp": {
+                "$gte": twenty_four_hours_ago.astimezone(pytz.UTC).isoformat()
+            }
+        }).sort("Timestamp", 1))
+
+        if not room_data:
+            return jsonify({"error": f"No data found for room: {room_name}"}), 404
+
+        # Process data into hourly points
+        hourly_data = {}
+        for doc in room_data:
+            timestamp = doc.get("Timestamp")
+            if isinstance(timestamp, str):
+                timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            
+            # Convert to EST and round to nearest hour
+            est_time = convert_to_est(timestamp)
+            hour_key = est_time.replace(minute=0, second=0, microsecond=0)
+            
+            if hour_key not in hourly_data:
+                hourly_data[hour_key] = {
+                    "temps": [],
+                    "humidity": []
+                }
+            
+            hourly_data[hour_key]["temps"].append(float(doc.get("Temperature")))
+            hourly_data[hour_key]["humidity"].append(float(doc.get("Humidity")))
+
+        # Calculate hourly averages
+        processed_data = {
+            "timestamps": [],
+            "temperatures": [],
+            "humidity": []
+        }
+
+        for hour in sorted(hourly_data.keys()):
+            processed_data["timestamps"].append(hour.isoformat())
+            processed_data["temperatures"].append(
+                sum(hourly_data[hour]["temps"]) / len(hourly_data[hour]["temps"])
+            )
+            processed_data["humidity"].append(
+                sum(hourly_data[hour]["humidity"]) / len(hourly_data[hour]["humidity"])
+            )
+
+        return jsonify(processed_data)
+    except Exception as e:
+        logger.error(f"Error fetching room data: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(debug=True)
