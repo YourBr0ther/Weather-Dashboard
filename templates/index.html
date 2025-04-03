@@ -1,535 +1,125 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Temperature Analysis</title>
+    <title>Weather Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/main.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            min-height: 100vh;
-            padding: 2rem;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .card {
-            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-            border-radius: 20px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        .card-header {
-            font-size: 1.1rem;
-            color: #888;
-            margin-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .temp-display {
-            font-size: 2.5rem;
-            font-weight: 300;
-            margin-bottom: 0.5rem;
-        }
-
-        .detail-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .detail-item {
-            background: rgba(255,255,255,0.05);
-            padding: 0.8rem;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .detail-label {
-            font-size: 0.8rem;
-            color: #666;
-            margin-bottom: 0.3rem;
-        }
-
-        .detail-value {
-            font-size: 1.2rem;
-            color: #fff;
-        }
-
-        .chart-container {
-            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-            border-radius: 20px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            height: 500px;
-            margin-bottom: 1.5rem;
-        }
-
-        .time {
-            position: absolute;
-            top: 2rem;
-            right: 2rem;
-            font-size: 1.2rem;
-            color: #666;
-        }
-
-        .comfort-indicator {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 15px;
-            font-size: 0.9rem;
-            margin-left: 0.5rem;
-        }
-
-        .comfort-good {
-            background: rgba(46, 213, 115, 0.2);
-            color: #2ed573;
-        }
-
-        .comfort-warm {
-            background: rgba(255, 71, 87, 0.2);
-            color: #ff4757;
-        }
-
-        .comfort-cold {
-            background: rgba(48, 51, 107, 0.2);
-            color: #30336b;
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='src/dashboard.js') }}" defer></script>
 </head>
-<body>
-    <div class="time" id="current-time"></div>
-    <div class="container">
-        <div class="dashboard-grid">
-            <div class="card">
-                <div class="card-header">
-                    Outside
-                    <img id="weather-icon" src="" alt="Weather icon" style="width: 32px; height: 32px; filter: brightness(0) invert(1);">
-                </div>
-                <div class="temp-display" id="outside-temp">--°</div>
-                <div id="weather-description" style="color: #666; margin-bottom: 1rem;">--</div>
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <div class="detail-label">Feels Like</div>
-                        <div class="detail-value" id="outside-feels-like">--°</div>
+<body class="h-full">
+    <div class="min-h-full p-4 md:p-6 lg:p-8">
+        <!-- Top Cards Section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Outdoor Climate Card -->
+            <div class="dashboard-card">
+                <h2 class="card-title">Outdoor Climate</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="metric-group">
+                        <span class="label">Temperature</span>
+                        <span class="main-value" id="outdoor-temp">--°F</span>
                     </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Humidity</div>
-                        <div class="detail-value" id="outside-humidity">--%</div>
+                    <div class="metric-group">
+                        <span class="label">Feels Like</span>
+                        <span class="main-value" id="outdoor-feels-like">--°F</span>
+                    </div>
+                    <div class="metric-group">
+                        <span class="label">Humidity</span>
+                        <span class="main-value" id="outdoor-humidity">--%</span>
+                    </div>
+                    <div class="metric-group">
+                        <span class="label">Condition</span>
+                        <span class="text-lg" id="outdoor-condition">--</span>
                     </div>
                 </div>
+                <div class="update-time" id="outdoor-update">Last updated: --</div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    AC Status
-                </div>
-                <div class="temp-display" id="ac-temp">--°</div>
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <div class="detail-label">Feels Like</div>
-                        <div class="detail-value" id="ac-feels-like">--°</div>
+            <!-- Indoor Average Card -->
+            <div class="dashboard-card">
+                <h2 class="card-title">Indoor Average</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="metric-group">
+                        <span class="label">Temperature</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="main-value" id="indoor-avg-temp">--°F</span>
+                            <span class="trend-indicator" id="indoor-temp-trend"></span>
+                        </div>
                     </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Humidity</div>
-                        <div class="detail-value" id="ac-humidity">--%</div>
+                    <div class="metric-group">
+                        <span class="label">Humidity</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="main-value" id="indoor-avg-humidity">--%</span>
+                            <span class="trend-indicator" id="indoor-humidity-trend"></span>
+                        </div>
                     </div>
                 </div>
+                <div class="mt-4">
+                    <span class="label">Rooms Reporting:</span>
+                    <span class="text-lg font-mono" id="rooms-count">--</span>
+                </div>
+                <div class="update-time" id="indoor-update">Last updated: --</div>
             </div>
 
-            <div id="room-cards">
-                <!-- Room cards will be dynamically added here -->
+            <!-- AC Control Card -->
+            <div class="dashboard-card">
+                <h2 class="card-title">AC Control</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="metric-group">
+                        <span class="label">Set Temperature</span>
+                        <span class="main-value" id="ac-set-temp">--°F</span>
+                    </div>
+                    <div class="metric-group">
+                        <span class="label">Current Mode</span>
+                        <span class="text-lg" id="ac-mode">--</span>
+                    </div>
+                    <div class="metric-group">
+                        <span class="label">Humidity</span>
+                        <span class="main-value" id="ac-humidity">--%</span>
+                    </div>
+                    <div class="metric-group">
+                        <span class="label">Status</span>
+                        <span class="text-lg" id="ac-status">--</span>
+                    </div>
+                </div>
+                <div class="update-time" id="ac-update">Last updated: --</div>
             </div>
         </div>
 
-        <div class="chart-container">
-            <div id="tempChart"></div>
-        </div>
-
-        <div class="chart-container">
-            <div id="humidityChart"></div>
+        <!-- Room Graphs Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="room-graphs">
+            <!-- Room graph cards will be dynamically inserted here -->
         </div>
     </div>
 
+    <!-- Room Graph Template -->
+    <template id="room-graph-template">
+        <div class="dashboard-card">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="card-title"></h2>
+                <div class="flex space-x-4">
+                    <div class="metric-group">
+                        <span class="label">Current Temp</span>
+                        <span class="main-value"></span>
+                    </div>
+                    <div class="metric-group">
+                        <span class="label">Current Humidity</span>
+                        <span class="main-value"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="h-64">
+                <canvas></canvas>
+            </div>
+        </div>
+    </template>
+
     <script>
-        // Update time
-        function updateTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit',
-                hour12: true 
-            });
-            document.getElementById('current-time').textContent = timeString;
-        }
-
-        setInterval(updateTime, 1000);
-        updateTime();
-
-        // Create room card
-        function createRoomCard(roomName, temp, humidity) {
-            if (temp === null || temp === undefined || humidity === null || humidity === undefined) {
-                return null; // Don't create card if data is invalid
-            }
-
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
-                <div class="card-header">
-                    ${roomName}
-                    <span class="comfort-indicator" id="${roomName}-comfort"></span>
-                </div>
-                <div class="temp-display">${Math.round(temp)}°</div>
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <div class="detail-label">Humidity</div>
-                        <div class="detail-value">${Math.round(humidity)}%</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Comfort</div>
-                        <div class="detail-value" id="${roomName}-comfort-value">--</div>
-                    </div>
-                </div>
-            `;
-            return card;
-        }
-
-        // Update comfort indicator
-        function updateComfortIndicator(roomName, temp, humidity) {
-            const indicator = document.getElementById(`${roomName}-comfort`);
-            const comfortValue = document.getElementById(`${roomName}-comfort-value`);
-            
-            if (!indicator || !comfortValue || temp === null || temp === undefined || 
-                humidity === null || humidity === undefined) {
-                return;
-            }
-            
-            // Simple comfort calculation
-            let comfort = "Good";
-            let className = "comfort-good";
-            
-            if (temp > 76) {
-                comfort = "Warm";
-                className = "comfort-warm";
-            } else if (temp < 68) {
-                comfort = "Cool";
-                className = "comfort-cold";
-            }
-            
-            if (humidity > 60) {
-                comfort += ", Humid";
-            } else if (humidity < 30) {
-                comfort += ", Dry";
-            }
-            
-            indicator.textContent = comfort;
-            indicator.className = `comfort-indicator ${className}`;
-            comfortValue.textContent = comfort;
-        }
-
-        // Fetch and display current conditions
-        function updateCurrentConditions(data) {
-            console.log('Updating current conditions with data:', data);
-            try {
-                // Update outside conditions
-                if (data.outside && data.outside.temperature !== null) {
-                    document.getElementById('outside-temp').textContent = `${Math.round(data.outside.temperature)}°`;
-                    document.getElementById('outside-feels-like').textContent = `${Math.round(data.outside.feels_like)}°`;
-                    document.getElementById('outside-humidity').textContent = `${Math.round(data.outside.humidity)}%`;
-                    document.getElementById('weather-description').textContent = data.outside.description || '--';
-                    if (data.outside.icon) {
-                        document.getElementById('weather-icon').src = `http://openweathermap.org/img/w/${data.outside.icon}.png`;
-                    }
-                } else {
-                    console.warn('No outside data available');
-                    document.getElementById('outside-temp').textContent = '--°';
-                    document.getElementById('outside-feels-like').textContent = '--°';
-                    document.getElementById('outside-humidity').textContent = '--%';
-                    document.getElementById('weather-description').textContent = '--';
-                }
-
-                // Update AC conditions
-                if (data.ac && data.ac.temperature !== null) {
-                    document.getElementById('ac-temp').textContent = `${Math.round(data.ac.temperature)}°`;
-                    document.getElementById('ac-feels-like').textContent = `${Math.round(data.ac.feels_like)}°`;
-                    document.getElementById('ac-humidity').textContent = `${Math.round(data.ac.humidity)}%`;
-                } else {
-                    console.warn('No AC data available');
-                    document.getElementById('ac-temp').textContent = '--°';
-                    document.getElementById('ac-feels-like').textContent = '--°';
-                    document.getElementById('ac-humidity').textContent = '--%';
-                }
-
-                // Update room conditions
-                if (data.rooms && Object.keys(data.rooms).length > 0) {
-                    const roomCardsContainer = document.getElementById('room-cards');
-                    roomCardsContainer.innerHTML = ''; // Clear existing cards
-                    
-                    Object.entries(data.rooms).forEach(([roomName, roomData]) => {
-                        if (roomData && roomData.temperature !== null && roomData.humidity !== null) {
-                            const card = createRoomCard(roomName, roomData.temperature, roomData.humidity);
-                            if (card) {
-                                roomCardsContainer.appendChild(card);
-                                updateComfortIndicator(roomName, roomData.temperature, roomData.humidity);
-                            }
-                        }
-                    });
-                } else {
-                    console.warn('No room data available');
-                    document.getElementById('room-cards').innerHTML = '';
-                }
-            } catch (error) {
-                console.error('Error updating current conditions:', error);
-            }
-        }
-
-        // Create temperature chart
-        function createCharts(data) {
-            // Temperature Chart
-            const tempTraces = [
-                {
-                    name: 'Outside',
-                    x: data.timestamps,
-                    y: data.outside_temp,
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: { 
-                        color: '#ff6b6b', 
-                        width: 2,
-                        shape: 'spline',
-                        smoothing: 1.3
-                    },
-                    connectgaps: true
-                },
-                {
-                    name: 'AC',
-                    x: data.timestamps,
-                    y: data.ac_temp,
-                    type: 'scatter',
-                    mode: 'lines+markers',
-                    line: { 
-                        color: '#48dbfb', 
-                        width: 2,
-                        shape: 'spline',
-                        smoothing: 1.3
-                    },
-                    marker: {
-                        size: 6,
-                        color: '#48dbfb'
-                    },
-                    connectgaps: true
-                }
-            ];
-
-            // Add room temperature traces
-            Object.entries(data.room_temps).forEach(([room, temps]) => {
-                tempTraces.push({
-                    name: `${room}`,
-                    x: data.timestamps,
-                    y: temps,
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: { 
-                        width: 2,
-                        shape: 'spline',
-                        smoothing: 1.3
-                    },
-                    connectgaps: true
-                });
-            });
-
-            const tempLayout = {
-                title: 'Temperature Comparison',
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                margin: { t: 30, r: 45, l: 45, b: 35 },
-                xaxis: {
-                    showgrid: false,
-                    color: '#666',
-                    tickformat: '%I:%M %p',
-                    tickangle: 0,
-                    range: [
-                        new Date(data.timestamps[0]).getTime(),
-                        new Date(data.timestamps[data.timestamps.length - 1]).getTime()
-                    ]
-                },
-                yaxis: {
-                    showgrid: true,
-                    gridcolor: 'rgba(255,255,255,0.1)',
-                    color: '#666',
-                    ticksuffix: '°'
-                },
-                font: { color: '#666' },
-                showlegend: true,
-                legend: {
-                    x: 0,
-                    y: 1.1,
-                    orientation: 'h',
-                    font: { color: '#666' }
-                }
-            };
-
-            // Humidity Chart
-            const humidityTraces = [
-                {
-                    name: 'Outside',
-                    x: data.timestamps,
-                    y: data.outside_humidity,
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: { 
-                        color: '#ff6b6b', 
-                        width: 2,
-                        shape: 'spline',
-                        smoothing: 1.3
-                    },
-                    connectgaps: true
-                },
-                {
-                    name: 'AC',
-                    x: data.timestamps,
-                    y: data.ac_humidity,
-                    type: 'scatter',
-                    mode: 'lines+markers',
-                    line: { 
-                        color: '#48dbfb', 
-                        width: 2,
-                        shape: 'spline',
-                        smoothing: 1.3
-                    },
-                    marker: {
-                        size: 6,
-                        color: '#48dbfb'
-                    },
-                    connectgaps: true
-                }
-            ];
-
-            // Add room humidity traces
-            Object.entries(data.room_humidity).forEach(([room, humidity]) => {
-                humidityTraces.push({
-                    name: `${room}`,
-                    x: data.timestamps,
-                    y: humidity,
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: { 
-                        width: 2,
-                        shape: 'spline',
-                        smoothing: 1.3
-                    },
-                    connectgaps: true
-                });
-            });
-
-            const humidityLayout = {
-                title: 'Humidity Comparison',
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                margin: { t: 30, r: 45, l: 45, b: 35 },
-                xaxis: {
-                    showgrid: false,
-                    color: '#666',
-                    tickformat: '%I:%M %p',
-                    tickangle: 0,
-                    range: [
-                        new Date(data.timestamps[0]).getTime(),
-                        new Date(data.timestamps[data.timestamps.length - 1]).getTime()
-                    ]
-                },
-                yaxis: {
-                    showgrid: true,
-                    gridcolor: 'rgba(255,255,255,0.1)',
-                    color: '#666',
-                    ticksuffix: '%',
-                    range: [0, 100]
-                },
-                font: { color: '#666' },
-                showlegend: true,
-                legend: {
-                    x: 0,
-                    y: 1.1,
-                    orientation: 'h',
-                    font: { color: '#666' }
-                }
-            };
-
-            const config = {
-                displayModeBar: false,
-                responsive: true
-            };
-
-            Plotly.newPlot('tempChart', tempTraces, tempLayout, config);
-            Plotly.newPlot('humidityChart', humidityTraces, humidityLayout, config);
-        }
-
-        // Function to update all data
-        async function updateAllData() {
-            console.log('Updating all data...');
-            try {
-                // Fetch current conditions
-                const currentResponse = await fetch('/api/current-conditions');
-                const currentData = await currentResponse.json();
-                console.log('Current conditions data:', currentData);
-                updateCurrentConditions(currentData);
-
-                // Fetch combined data for charts
-                const combinedResponse = await fetch('/api/combined-data');
-                const combinedData = await combinedResponse.json();
-                console.log('Combined data:', combinedData);
-                createCharts(combinedData);
-
-            } catch (error) {
-                console.error('Error updating data:', error);
-            }
-        }
-
-        // Initial load
-        updateAllData();
-
-        // Set up auto-refresh every 5 minutes (300000 milliseconds)
-        setInterval(updateAllData, 300000);
-
-        // Add last updated indicator
-        function updateLastUpdated() {
-            const now = new Date();
-            document.getElementById('last-updated').textContent = `Last updated: ${now.toLocaleTimeString()}`;
-        }
-
-        // Modify updateAllData to include last updated time
-        const originalUpdateAllData = updateAllData;
-        updateAllData = async function() {
-            await originalUpdateAllData();
-            updateLastUpdated();
-        };
+        // JavaScript code will be added in the next step
     </script>
-    <div id="last-updated" style="position: fixed; bottom: 10px; right: 10px; color: #666; font-size: 0.8em;"></div>
 </body>
 </html>

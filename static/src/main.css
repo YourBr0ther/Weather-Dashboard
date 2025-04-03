@@ -1,0 +1,51 @@
+@import 'inter-ui/inter.css';
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-text-primary antialiased;
+  }
+}
+
+@layer components {
+  .dashboard-card {
+    @apply bg-surface rounded-card p-card-padding shadow-lg backdrop-blur-sm 
+           transition-all duration-300 hover:shadow-xl;
+  }
+
+  .card-title {
+    @apply text-card-title font-semibold mb-4;
+  }
+
+  .main-value {
+    @apply text-main-value font-mono font-semibold;
+  }
+
+  .label {
+    @apply text-label text-text-secondary;
+  }
+
+  .metric-group {
+    @apply flex flex-col space-y-1;
+  }
+
+  .update-time {
+    @apply text-label text-text-secondary mt-4;
+  }
+
+  .trend-indicator {
+    @apply inline-flex items-center space-x-1 text-label;
+  }
+
+  .trend-up {
+    @apply text-graph-temp;
+  }
+
+  .trend-down {
+    @apply text-graph-humidity;
+  }
+} 
