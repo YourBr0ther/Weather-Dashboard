@@ -126,6 +126,12 @@ const chartOptions = {
                 unit: 'hour',
                 displayFormats: {
                     hour: 'ha'
+                },
+                parser: 'iso'
+            },
+            adapters: {
+                date: {
+                    zone: 'America/New_York'
                 }
             },
             grid: {
@@ -163,6 +169,9 @@ const chartOptions = {
 
 // Room Graph Functions
 const createRoomGraph = async (roomName, currentData) => {
+    console.log(`📊 Creating graph for room: ${roomName}`);
+    console.log(`Current data:`, currentData);
+    
     const template = document.getElementById('room-graph-template');
     const clone = template.content.cloneNode(true);
     
@@ -183,21 +192,43 @@ const createRoomGraph = async (roomName, currentData) => {
     // Set up chart
     const canvas = clone.querySelector('canvas');
     
+    // Add to container first
+    document.getElementById('room-graphs').appendChild(clone);
+    console.log(`📦 Graph card added to container for ${roomName}`);
+    
     try {
+        console.log(`🔍 Fetching historical data for ${roomName}...`);
         // Fetch historical data for the room
         const response = await fetch(`/api/room-data/${encodeURIComponent(roomName)}`);
+        console.log(`📡 API Response status:`, response.status);
         const historicalData = await response.json();
+        console.log(`📥 Historical data received:`, historicalData);
         
-        if (historicalData && historicalData.timestamps) {
+        if (historicalData && historicalData.timestamps && historicalData.temperature && historicalData.humidity) {
+            console.log(`✨ Creating data points for ${roomName}...`);
+            // Create data points with proper timestamps
+            const data = historicalData.timestamps.map((timestamp, index) => ({
+                x: new Date(timestamp),
+                y: historicalData.temperature[index]
+            }));
+            
+            const humidityData = historicalData.timestamps.map((timestamp, index) => ({
+                x: new Date(timestamp),
+                y: historicalData.humidity[index]
+            }));
+            
+            console.log(`📈 Temperature data points:`, data);
+            console.log(`💧 Humidity data points:`, humidityData);
+            
+            console.log(`🎨 Creating chart for ${roomName}...`);
             const chart = new Chart(canvas, {
                 type: 'line',
                 data: {
-                    labels: historicalData.timestamps,
                     datasets: [
                         {
                             label: 'Temperature',
                             yAxisID: 'temperature',
-                            data: historicalData.temperatures,
+                            data: data,
                             borderColor: '#FF4B4B',
                             backgroundColor: 'rgba(255, 75, 75, 0.1)',
                             borderWidth: 2,
@@ -207,7 +238,7 @@ const createRoomGraph = async (roomName, currentData) => {
                         {
                             label: 'Humidity',
                             yAxisID: 'humidity',
-                            data: historicalData.humidity,
+                            data: humidityData,
                             borderColor: '#4B9EFF',
                             backgroundColor: 'rgba(75, 158, 255, 0.1)',
                             borderWidth: 2,
@@ -219,20 +250,23 @@ const createRoomGraph = async (roomName, currentData) => {
                 options: chartOptions
             });
             
+            console.log(`✅ Chart created successfully for ${roomName}`);
+            
             // Store chart instance for updates
             card.dataset.chartInstance = chart;
+        } else {
+            console.error(`❌ Invalid data structure for ${roomName}:`, historicalData);
+            throw new Error('Invalid data structure received from API');
         }
     } catch (error) {
-        console.error(`Error creating graph for ${roomName}:`, error);
+        console.error(`❌ Error creating graph for ${roomName}:`, error);
+        console.error('Error stack:', error.stack);
         canvas.parentElement.innerHTML = `
             <div class="flex items-center justify-center h-full text-error">
                 <span>Failed to load graph data</span>
             </div>
         `;
     }
-    
-    // Add to container
-    document.getElementById('room-graphs').appendChild(clone);
 };
 
 // Main update function

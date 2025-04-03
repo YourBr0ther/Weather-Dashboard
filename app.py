@@ -433,11 +433,14 @@ def debug_data_count():
 @app.route("/api/room-data/<room_name>")
 def room_data(room_name):
     try:
+        logger.info(f"🔍 Fetching data for room: {room_name}")
         if not client:
+            logger.error("❌ Database connection not available")
             return jsonify({"error": "Database connection not available"}), 500
 
         # Get the last 24 hours of data in EST
         twenty_four_hours_ago = datetime.now(EST) - timedelta(hours=24)
+        logger.info(f"📅 Fetching data since: {twenty_four_hours_ago.isoformat()}")
         
         # Query MongoDB for room data
         room_data = list(temp_logs_collection.find({
@@ -447,48 +450,88 @@ def room_data(room_name):
             }
         }).sort("Timestamp", 1))
 
+        logger.info(f"📊 Found {len(room_data)} records for room {room_name}")
+        
         if not room_data:
-            return jsonify({"error": f"No data found for room: {room_name}"}), 404
+            logger.warning(f"⚠️ No data found for room: {room_name}")
+            # Try querying without the Room field as a fallback
+            room_data = list(temp_logs_collection.find({
+                "Timestamp": {
+                    "$gte": twenty_four_hours_ago.astimezone(pytz.UTC).isoformat()
+                }
+            }).sort("Timestamp", 1))
+            logger.info(f"📊 Found {len(room_data)} records in fallback query")
+            if not room_data:
+                logger.error(f"❌ No data found even in fallback query")
+                return jsonify({"error": f"No data found for room: {room_name}"}), 404
 
         # Process data into hourly points
         hourly_data = {}
+        skipped_records = 0
         for doc in room_data:
-            timestamp = doc.get("Timestamp")
-            if isinstance(timestamp, str):
-                timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-            
-            # Convert to EST and round to nearest hour
-            est_time = convert_to_est(timestamp)
-            hour_key = est_time.replace(minute=0, second=0, microsecond=0)
-            
-            if hour_key not in hourly_data:
-                hourly_data[hour_key] = {
-                    "temps": [],
-                    "humidity": []
-                }
-            
-            hourly_data[hour_key]["temps"].append(float(doc.get("Temperature")))
-            hourly_data[hour_key]["humidity"].append(float(doc.get("Humidity")))
+            try:
+                timestamp = doc.get("Timestamp")
+                if isinstance(timestamp, str):
+                    timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                
+                # Convert to EST and round to nearest hour
+                est_time = convert_to_est(timestamp)
+                hour_key = est_time.replace(minute=0, second=0, microsecond=0)
+                
+                if hour_key not in hourly_data:
+                    hourly_data[hour_key] = {
+                        "temps": [],
+                        "humidity": []
+                    }
+                
+                # Handle temperature as string or number
+                temp = doc.get("Temperature")
+                if isinstance(temp, str):
+                    temp = float(temp)
+                
+                # Handle humidity as number
+                humidity = doc.get("Humidity")
+                if humidity is not None:
+                    humidity = float(humidity)
+                
+                hourly_data[hour_key]["temps"].append(temp)
+                hourly_data[hour_key]["humidity"].append(humidity)
+            except (ValueError, TypeError) as e:
+                skipped_records += 1
+                logger.error(f"❌ Error processing document: {doc}")
+                logger.error(f"   └─ Error details: {str(e)}")
+                continue
 
         # Calculate hourly averages
         processed_data = {
             "timestamps": [],
-            "temperatures": [],
+            "temperature": [],
             "humidity": []
         }
 
         for hour in sorted(hourly_data.keys()):
             processed_data["timestamps"].append(hour.isoformat())
-            processed_data["temperatures"].append(
-                sum(hourly_data[hour]["temps"]) / len(hourly_data[hour]["temps"])
-            )
-            processed_data["humidity"].append(
-                sum(hourly_data[hour]["humidity"]) / len(hourly_data[hour]["humidity"])
-            )
+            if hourly_data[hour]["temps"]:
+                processed_data["temperature"].append(
+                    sum(hourly_data[hour]["temps"]) / len(hourly_data[hour]["temps"])
+                )
+            if hourly_data[hour]["humidity"]:
+                processed_data["humidity"].append(
+                    sum(hourly_data[hour]["humidity"]) / len(hourly_data[hour]["humidity"])
+                )
 
+        logger.info(f"✨ Processing complete:")
+        logger.info(f"   └─ Input records: {len(room_data)}")
+        logger.info(f"   └─ Skipped records: {skipped_records}")
+        logger.info(f"   └─ Output hourly points: {len(processed_data['timestamps'])}")
+        logger.info(f"   └─ Sample data point: {processed_data['timestamps'][0] if processed_data['timestamps'] else 'None'}")
+        logger.info(f"   └─ Temperature range: {min(processed_data['temperature'])} to {max(processed_data['temperature'])}")
+        logger.info(f"   └─ Humidity range: {min(processed_data['humidity'])} to {max(processed_data['humidity'])}")
+        
         return jsonify(processed_data)
     except Exception as e:
-        logger.error(f"Error fetching room data: {str(e)}")
+        logger.error(f"❌ Error in room_data endpoint: {str(e)}")
+        logger.exception("Detailed traceback:")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
