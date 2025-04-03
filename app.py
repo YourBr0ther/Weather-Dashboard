@@ -535,4 +535,8 @@ def room_data(room_name):
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Allow access from local network and enable debug mode
+    logger.info("🌐 Starting server on all network interfaces (0.0.0.0)")
+    logger.info("📝 Debug mode enabled")
+    logger.info("⚠️ Make sure your firewall allows incoming connections on port 5000")
+    app.run(host='0.0.0.0', port=5000, debug=True)
